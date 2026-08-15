@@ -1,0 +1,64 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #0a0d10;
+  background-image:
+    radial-gradient(circle at 15% 0%, rgba(94, 234, 212, 0.06), transparent 40%),
+    radial-gradient(circle at 85% 20%, rgba(242, 184, 75, 0.05), transparent 35%);
+  color: #e8e6e1;
+}
+
+::selection {
+  background-color: #5eead4;
+  color: #0a0d10;
+}
+
+* {
+  scrollbar-color: #1f2a30 transparent;
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+@keyframes blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-rise {
+  animation: rise 0.4s ease-out both;
+}
+
+.cursor-blink::after {
+  content: "_";
+  animation: blink 1s step-start infinite;
+  color: #5eead4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
