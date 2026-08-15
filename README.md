@@ -1,54 +1,90 @@
-# DiscoverabilityOS
+Markdown
+# Discoverability OS — GEO Audit
 
-Scores any web page for how likely it is to be extracted, quoted, and cited by AI answer engines (Claude, ChatGPT, Perplexity), based on the factors identified in Princeton's GEO-bench study ("GEO: Generative Engine Optimization," Aggarwal et al., KDD 2024). Outputs a downloadable `llms.txt` file.
+> Scores web pages for AI engine discoverability (Claude, ChatGPT, Perplexity) based on Princeton's GEO-bench research and outputs a ready-to-publish `llms.txt` file.
 
-**How it works:** paste a URL → the app scrapes the page's visible text → Claude scores it against five research-backed factors (statistics, citations, quotes, fluency, entity clarity) → you get a score, per-factor findings, and a ready-to-publish `llms.txt`.
+🔗 **Live Demo:** [discoverability-score.vercel.app](https://discoverability-score.vercel.app)
 
-## Stack
+---
 
-- Next.js 14 (App Router) — frontend + API route in one deployable project
-- Anthropic API (`@anthropic-ai/sdk`) — does the scoring
-- Cheerio — server-side HTML parsing
-- Tailwind CSS
+## Overview
 
-No separate backend, no database. Everything runs as a single Vercel deployment.
+Discoverability OS evaluates how likely a web page is to be extracted, quoted, and cited by AI answer engines. It uses the factors identified in Princeton's GEO-bench study (*"GEO: Generative Engine Optimization,"* Aggarwal et al., KDD 2024).
 
-## Run locally
+### How It Works
+1. **Paste a URL** — The app scrapes the visible text of the target web page.
+2. **AI Analysis** — Claude scores the page against 5 research-backed factors:
+   * Statistics & Numerical Data
+   * Citations & Sources
+   * Direct Quotes
+   * Fluency & Authority
+   * Entity Clarity
+3. **Instant Output** — You receive a score breakdown, per-factor findings, and a downloadable `llms.txt` file ready for AI crawlers.
 
+---
+
+## Tech Stack
+
+* **Framework:** [Next.js 14](https://nextjs.org/) (App Router)
+* **AI Model:** Anthropic Claude API (`@anthropic-ai/sdk`)
+* **Scraper:** [Cheerio](https://cheerio.js.org/) (Server-side HTML parsing)
+* **Styling:** [Tailwind CSS](https://tailwindcss.com/)
+* **Deployment:** [Vercel](https://vercel.com/)
+
+---
+
+## Getting Started Locally
+
+### Prerequisites
+Make sure you have [Node.js](https://nodejs.org/) installed on your machine.
+
+### 1. Clone the repository
 ```bash
+git clone [https://github.com/0xhipster/discoverability-os.git](https://github.com/0xhipster/discoverability-os.git)
+cd discoverability-os
+2. Install dependencies
+Bash
 npm install
-cp .env.example .env.local   # then paste your Anthropic API key into .env.local
+3. Configure environment variables
+Duplicate the .env.example file in the root directory and rename the copy to .env.local. Open it and add your secret Anthropic API key:
+
+Code snippet
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+4. Run the development server
+Bash
 npm run dev
-```
+Open http://localhost:3000 in your browser to see the result.
 
-Open http://localhost:3000.
+Deployment (Vercel)
+This app is designed to be deployed on Vercel with zero configuration.
 
-## Deploy to Vercel
+Log in to Vercel and import this GitHub repository.
 
-1. Push this folder to a new GitHub repo.
-2. Go to [vercel.com/new](https://vercel.com/new) and import the repo. Vercel auto-detects Next.js — no config needed.
-3. In the project's **Settings → Environment Variables**, add:
-   - `ANTHROPIC_API_KEY` = your key from [console.anthropic.com](https://console.anthropic.com)
-4. Deploy. You'll get a `your-project.vercel.app` URL.
+Before clicking deploy, open the Environment Variables section.
 
-## Deploy to Netlify
+Add a new variable:
 
-Netlify also supports Next.js App Router out of the box via its Next.js runtime.
+Key: ANTHROPIC_API_KEY
 
-1. Push to GitHub, then "Add new site → Import an existing project" in Netlify.
-2. Build command: `next build`. Publish directory: leave default (Netlify's Next.js plugin handles it).
-3. Add the `ANTHROPIC_API_KEY` environment variable in **Site configuration → Environment variables**.
-4. Deploy.
+Value: your_actual_api_key
 
-## Known MVP limitations (worth knowing before you demo this)
+Click Deploy.
 
-- **JavaScript-rendered pages won't scrape.** The scraper fetches raw HTML — it doesn't run a headless browser. Pages that render their content client-side (many React/Vue marketing sites) will fail with a clear error message rather than silently returning nothing.
-- **Scoring is a heuristic, not ground truth.** No AI vendor publishes what actually gets cited, so the score reflects Claude's judgment against GEO-bench's published factors — a strong, research-backed proxy, not a guarantee.
-- **Single-page scans only.** No crawling, no site-wide audits, no history/accounts yet — intentionally, to keep the MVP scope tight.
+Known Limitations
+JavaScript-Rendered Pages: The scraper fetches raw HTML. Client-rendered single-page applications (like some React/Vue sites) will fail with a clear error message because there is no headless browser attached.
 
-## Next steps (not built yet)
+Heuristic Scoring: Scores reflect Claude's evaluation against GEO-bench factors as a research-backed proxy. No AI vendor publishes their exact ranking algorithms.
 
-- Content rewrite generator (Module 3 from the original product plan)
-- JSON-LD schema builder
-- Scan history via a database (Supabase)
-- GA4 / server-log integration to correlate AI crawler hits with actual traffic
+Single-Page Scans: Scans are performed on individual URLs rather than full-site crawls to keep the MVP scope tight.
+
+Roadmap
+[ ] Content rewrite generator (Module 3)
+
+[ ] Automated JSON-LD schema generation
+
+[ ] Scan history and project workspaces via Supabase
+
+[ ] Crawler traffic analytics (GA4/Server log integration)
+
+License & Author
+Built by @0xhipster. Open for contributions and feedback!
