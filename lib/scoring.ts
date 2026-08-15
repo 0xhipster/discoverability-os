@@ -1,39 +1,53 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { AnalysisResult, Factor, FactorKey, Penalty } from "./types";
 import type { ScrapedPage } from "./scrape";
+import { UserError } from "./errors";
 
 const MODEL = "claude-sonnet-5";
 
+const FACTOR_KEYS: FactorKey[] = ["statistics", "citations", "quotes", "fluency", "entityClarity"];
+
+// Attribution note: only statistics, citations, and quotes are among the
+// top-performing methods actually tested in Aggarwal et al.'s GEO-bench
+// study (KDD 2024). Fluency was also tested there, with a smaller measured
+// effect. entityClarity is NOT one of the nine methods the paper tested —
+// it's a heuristic we layer on top, based on the general (not
+// paper-sourced) pattern that AI engines extract concrete claims more
+// readily than vague language. The researchNote text below reflects that
+// distinction so we're not misattributing findings to a study that didn't
+// measure them.
 const FACTOR_META: Record<FactorKey, { label: string; researchNote: string }> = {
   statistics: {
     label: "Statistics & hard numbers",
     researchNote:
-      "The strongest single lever in the Princeton GEO-bench study (Aggarwal et al., KDD 2024) — up to +40% visibility in generative engine answers.",
+      "One of the strongest single levers in the Princeton GEO-bench study (Aggarwal et al., KDD 2024) — Statistics Addition showed up to ~40% higher visibility in generative engine answers.",
   },
   citations: {
     label: "External citations",
     researchNote:
-      "Citing outside sources produced the largest 'equalizer effect' in GEO-bench — up to +115% visibility for lower-ranked pages.",
+      "Citing outside sources (Cite Sources) was one of GEO-bench's top three methods, producing the largest 'equalizer effect' for lower-ranked pages in the study.",
   },
   quotes: {
     label: "Expert quotes",
     researchNote:
-      "Direct, attributable quotes were the second-strongest factor in GEO-bench, giving AI engines a discrete, citable unit of text.",
+      "Quotation Addition was the top-performing single method in GEO-bench, giving AI engines a discrete, directly citable unit of text.",
   },
   fluency: {
     label: "Fluency & directness",
     researchNote:
-      "GEO-bench found generative engines reward direct, plainly-stated claims over persuasive or jargon-heavy tone.",
+      "Fluency Optimization was tested in GEO-bench and showed a real, positive effect on visibility — smaller than statistics, citations, or quotes, but consistent.",
   },
   entityClarity: {
     label: "Entity & fact clarity",
     researchNote:
-      "AI engines extract concrete entities (products, categories, specific claims) far more readily than generic marketing language.",
+      "Not one of the nine methods GEO-bench tested — this is a heuristic we add on top, based on the general pattern that AI engines extract concrete, specific claims more readily than generic marketing language.",
   },
 };
 
 function buildPrompt(page: ScrapedPage): string {
-  return `You are a Generative Engine Optimization (GEO) auditor. You evaluate web page text for how likely it is to be extracted, quoted, and cited by AI answer engines (Claude, ChatGPT, Perplexity), based on the findings of the Princeton GEO-bench study (Aggarwal et al., KDD 2024).
+  return `You are a Generative Engine Optimization (GEO) auditor. You evaluate web page text for how likely it is to be extracted, quoted, and cited by AI answer engines (Claude, ChatGPT, Perplexity).
+
+Three of the five factors below (statistics, citations, quotes) are the top-tested methods from the Princeton GEO-bench study (Aggarwal et al., KDD 2024). Fluency was also tested there with a smaller effect. entityClarity is an additional heuristic beyond what that study measured — treat it as a useful signal, not a cited research finding.
 
 Analyze ONLY the page text provided below. Do not assume anything not present in the text.
 
@@ -99,14 +113,73 @@ interface ClaudeAnalysisOut {
   llmsSummaryFacts: string[];
 }
 
+function stripCodeFence(raw: string): string {
+  const trimmed = raw.trim();
+  // Handles ```json ... ```, plain ``` ... ```, or no fence at all.
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  return fenced ? fenced[1].trim() : trimmed;
+}
+
+function isFactorOut(value: unknown): value is ClaudeFactorOut {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.score === "number" &&
+    typeof v.finding === "string" &&
+    Array.isArray(v.evidence) &&
+    v.evidence.every((e) => typeof e === "string")
+  );
+}
+
+function isValidClaudeOutput(value: unknown): value is ClaudeAnalysisOut {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+
+  if (typeof v.overallScore !== "number" || typeof v.summary !== "string") return false;
+
+  const factors = v.factors as Record<string, unknown> | undefined;
+  if (!factors || typeof factors !== "object") return false;
+  if (!FACTOR_KEYS.every((key) => isFactorOut(factors[key]))) return false;
+
+  const penalties = v.penalties as Record<string, unknown> | undefined;
+  if (!penalties || typeof penalties !== "object") return false;
+  const keywordStuffing = penalties.keywordStuffing as Record<string, unknown> | undefined;
+  const vagueAuthorityClaims = penalties.vagueAuthorityClaims as Record<string, unknown> | undefined;
+  if (
+    !keywordStuffing ||
+    typeof keywordStuffing.detected !== "boolean" ||
+    typeof keywordStuffing.note !== "string"
+  )
+    return false;
+  if (
+    !vagueAuthorityClaims ||
+    typeof vagueAuthorityClaims.detected !== "boolean" ||
+    typeof vagueAuthorityClaims.note !== "string"
+  )
+    return false;
+
+  if (!Array.isArray(v.keyEntities) || !v.keyEntities.every((e) => typeof e === "string")) return false;
+  if (!Array.isArray(v.llmsSummaryFacts) || !v.llmsSummaryFacts.every((f) => typeof f === "string"))
+    return false;
+
+  return true;
+}
+
 function parseClaudeJson(raw: string): ClaudeAnalysisOut {
-  let cleaned = raw.trim();
-  cleaned = cleaned.replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
+  const cleaned = stripCodeFence(raw);
+
+  let parsed: unknown;
   try {
-    return JSON.parse(cleaned);
+    parsed = JSON.parse(cleaned);
   } catch {
-    throw new Error("Couldn't parse the model's analysis. Try again.");
+    throw new UserError("Couldn't parse the model's analysis. Please try again.");
   }
+
+  if (!isValidClaudeOutput(parsed)) {
+    throw new UserError("The model returned an unexpected format. Please try again.");
+  }
+
+  return parsed;
 }
 
 function buildLlmsTxt(page: ScrapedPage, out: ClaudeAnalysisOut): string {
@@ -135,27 +208,36 @@ function buildLlmsTxt(page: ScrapedPage, out: ClaudeAnalysisOut): string {
 export async function analyzePage(page: ScrapedPage): Promise<AnalysisResult> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    throw new Error(
+    throw new UserError(
       "Server is missing ANTHROPIC_API_KEY. Add it in your Vercel project's environment variables."
     );
   }
 
   const client = new Anthropic({ apiKey });
 
-  const message = await client.messages.create({
-    model: MODEL,
-    max_tokens: 1500,
-    messages: [{ role: "user", content: buildPrompt(page) }],
-  });
+  let message: Awaited<ReturnType<typeof client.messages.create>>;
+  try {
+    message = await client.messages.create({
+      model: MODEL,
+      max_tokens: 1500,
+      messages: [{ role: "user", content: buildPrompt(page) }],
+    });
+  } catch (err) {
+    // Don't forward raw SDK error text (can include account/rate-limit
+    // internals) to the client — log it server-side and show a generic
+    // message instead.
+    console.error("Anthropic API error:", err);
+    throw new UserError("Couldn't complete the analysis right now. Please try again in a moment.");
+  }
 
   const textBlock = message.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") {
-    throw new Error("The model didn't return a text response.");
+    throw new UserError("The model didn't return a text response.");
   }
 
   const out = parseClaudeJson(textBlock.text);
 
-  const factors: Factor[] = (Object.keys(FACTOR_META) as FactorKey[]).map((key) => {
+  const factors: Factor[] = FACTOR_KEYS.map((key) => {
     const f = out.factors[key];
     return {
       key,
