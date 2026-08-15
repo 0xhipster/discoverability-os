@@ -121,11 +121,12 @@ function Header() {
         <span className="text-signal">quote this page</span>, or skip it?
       </h1>
       <p className="mt-4 max-w-xl font-mono text-sm leading-relaxed text-muted">
-        Paste a URL. This scores it against the factors Princeton's GEO-bench
-        study (KDD 2024) found actually move visibility inside AI answer
-        engines — statistics, citations, quotes, and factual density. Then it
-        outputs an <span className="text-paper">llms.txt</span> file ready
-        for AI crawlers.
+        Paste a URL. Claude scores it on five factors — statistics,
+        citations, and quotes are the top-tested methods from Princeton's
+        GEO-bench study (KDD 2024); fluency and entity clarity are
+        additional heuristics layered on top. Then it outputs an{" "}
+        <span className="text-paper">llms.txt</span> file ready for AI
+        crawlers.
       </p>
     </div>
   );
