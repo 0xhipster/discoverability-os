@@ -110,4 +110,4 @@ No license has been specified yet — until one is added, this code defaults to 
 
 ## Author
 
-Built by [@0xhipster](https://github.com/0xhipster). Open for contributions and feedback!
+Built by [@0xhipster](https://github.com/0xhipster). Open for contributions and feedback! :)
