@@ -181,7 +181,7 @@ function Header() {
     <div className="animate-rise">
       <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.2em] text-signal">
         <span className="h-1.5 w-1.5 rounded-full bg-signal" />
-        DiscoverabilityOS
+        Discoverability Score
       </div>
       <h1 className="mt-4 font-display text-4xl font-semibold leading-tight sm:text-5xl">
         Will an AI engine{" "}
