@@ -120,6 +120,16 @@ function stripCodeFence(raw: string): string {
   return fenced ? fenced[1].trim() : trimmed;
 }
 
+// Some model responses add a short leading/trailing sentence around the
+// JSON despite instructions not to. Extract the outermost {...} block
+// rather than requiring the whole string to be exactly valid JSON.
+function extractJsonObject(text: string): string {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) return text;
+  return text.slice(start, end + 1);
+}
+
 function isFactorOut(value: unknown): value is ClaudeFactorOut {
   if (!value || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;
@@ -172,7 +182,14 @@ function parseClaudeJson(raw: string): ClaudeAnalysisOut {
   try {
     parsed = JSON.parse(cleaned);
   } catch {
-    throw new UserError("Couldn't parse the model's analysis. Please try again.");
+    // Fall back to extracting the outermost {...} in case of stray
+    // leading/trailing text around the JSON.
+    try {
+      parsed = JSON.parse(extractJsonObject(cleaned));
+    } catch {
+      console.error("Raw model output that failed to parse:", raw.slice(0, 2000));
+      throw new UserError("Couldn't parse the model's analysis. Please try again.");
+    }
   }
 
   if (!isValidClaudeOutput(parsed)) {
@@ -219,7 +236,7 @@ export async function analyzePage(page: ScrapedPage): Promise<AnalysisResult> {
   try {
     message = await client.messages.create({
       model: MODEL,
-      max_tokens: 1500,
+      max_tokens: 2500,
       messages: [{ role: "user", content: buildPrompt(page) }],
     });
   } catch (err) {
