@@ -188,7 +188,7 @@ function Header() {
         <span className="text-signal">quote this page</span>, or skip it?
       </h1>
       <p className="mt-4 max-w-xl font-mono text-sm leading-relaxed text-muted">
-        Paste a URL. Claude scores it on five factors — statistics,
+        Paste a URL. Claude scores it on five factors: statistics,
         citations, and quotes are the top-tested methods from Princeton's
         GEO-bench study (KDD 2024); fluency and entity clarity are
         additional heuristics layered on top. Then it outputs an{" "}
@@ -378,7 +378,7 @@ function ProbePanel({
 
           {o.errored ? (
             <div className="mt-2 font-mono text-[11px] text-muted/60">
-              This check failed to complete — not counted in the totals below.
+              This check failed to complete, not counted in the totals below.
             </div>
           ) : (
             <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -396,12 +396,12 @@ function ProbePanel({
 
       <div className="mt-4 border-t border-line pt-4">
         <p className="font-mono text-sm text-paper">
-          Predicted: <span className="text-signal">{predictedScore}/100</span> — Actually
+          Predicted: <span className="text-signal">{predictedScore}/100</span>, actually
           cited: <span className="text-signal">{result.citedCount} of {result.totalCount}</span>{" "}
           live searches
         </p>
         <p className="mt-2 font-mono text-[11px] leading-relaxed text-muted/60">
-          This is a live snapshot from a single run against Claude's web search — not a
+          This is a live snapshot from a single run against Claude's web search, not a
           statistical benchmark, and not a measure of ChatGPT, Google, or any other AI
           system. Run it again later and results may differ; model answers aren't
           perfectly consistent run to run.
