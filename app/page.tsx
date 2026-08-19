@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import type { AnalysisResult } from "@/lib/types";
+import type { AnalysisResult, ProbeResponse, QueryIntent } from "@/lib/types";
 
 type Status = "idle" | "scanning" | "error" | "done";
+type ProbeStatus = "idle" | "running" | "error" | "done";
 
 const SCAN_LOG = [
   "resolving host…",
@@ -21,6 +22,10 @@ export default function Home() {
   const [error, setError] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
 
+  const [probeStatus, setProbeStatus] = useState<ProbeStatus>("idle");
+  const [probeError, setProbeError] = useState("");
+  const [probeResult, setProbeResult] = useState<ProbeResponse | null>(null);
+
   async function handleScan(e: React.FormEvent) {
     e.preventDefault();
     if (!url.trim()) return;
@@ -29,6 +34,9 @@ export default function Home() {
     setError("");
     setResult(null);
     setLogIndex(0);
+    setProbeStatus("idle");
+    setProbeResult(null);
+    setProbeError("");
 
     const interval = setInterval(() => {
       setLogIndex((i) => (i < SCAN_LOG.length - 1 ? i + 1 : i));
@@ -53,6 +61,33 @@ export default function Home() {
       clearInterval(interval);
       setError(err instanceof Error ? err.message : "Scan failed.");
       setStatus("error");
+    }
+  }
+
+  async function handleProbe() {
+    if (!url.trim()) return;
+
+    setProbeStatus("running");
+    setProbeError("");
+    setProbeResult(null);
+
+    try {
+      const res = await fetch("/api/probe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Search check failed.");
+      }
+
+      setProbeResult(data as ProbeResponse);
+      setProbeStatus("done");
+    } catch (err) {
+      setProbeError(err instanceof Error ? err.message : "Search check failed.");
+      setProbeStatus("error");
     }
   }
 
@@ -100,7 +135,39 @@ export default function Home() {
         {status === "scanning" && <ScanningPanel logIndex={logIndex} />}
         {status === "error" && <ErrorPanel message={error} />}
         {status === "done" && result && (
-          <ResultPanel result={result} onDownload={downloadLlmsTxt} />
+          <>
+            <ResultPanel result={result} onDownload={downloadLlmsTxt} />
+
+            <div className="mt-8 rounded-sm border border-line bg-panel p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-muted">
+                    Prediction vs. reality
+                  </h2>
+                  <p className="mt-1 font-mono text-xs leading-relaxed text-muted/70">
+                    The score above is a model's prediction. This checks what actually
+                    happens when Claude searches the live web.
+                  </p>
+                </div>
+                <button
+                  onClick={handleProbe}
+                  disabled={probeStatus === "running"}
+                  className="whitespace-nowrap rounded-sm border border-signal/40 px-5 py-2.5 font-mono text-xs text-signal transition hover:bg-signal/10 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {probeStatus === "running"
+                    ? "Searching live…"
+                    : "Run live search check →"}
+                </button>
+              </div>
+
+              {probeStatus === "error" && (
+                <p className="mt-4 font-mono text-xs text-flag">{probeError}</p>
+              )}
+              {probeStatus === "done" && probeResult && (
+                <ProbePanel result={probeResult} predictedScore={result.overallScore} />
+              )}
+            </div>
+          </>
         )}
 
         {status === "idle" && <IdleHint />}
@@ -285,6 +352,94 @@ function ResultPanel({
   );
 }
 
+function ProbePanel({
+  result,
+  predictedScore,
+}: {
+  result: ProbeResponse;
+  predictedScore: number;
+}) {
+  return (
+    <div className="animate-rise mt-5 space-y-3">
+      {result.outcomes.map((o, i) => (
+        <div
+          key={o.questionId}
+          className="rounded-sm border border-line bg-ink/40 p-3"
+          style={{ animationDelay: `${i * 120}ms` }}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <span className="mr-2 rounded-sm bg-line px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted">
+                {intentLabel(o.intent)}
+              </span>
+              <span className="font-mono text-xs text-paper/90">{o.question}</span>
+            </div>
+          </div>
+
+          {o.errored ? (
+            <div className="mt-2 font-mono text-[11px] text-muted/60">
+              This check failed to complete — not counted in the totals below.
+            </div>
+          ) : (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Badge ok={o.retrieved} label="Retrieved" />
+              <Badge ok={o.cited} label="Cited" />
+              {!o.cited && o.citedSources.length > 0 && (
+                <span className="font-mono text-[11px] text-muted/60">
+                  Cited instead: {o.citedSources.join(", ")}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      ))}
+
+      <div className="mt-4 border-t border-line pt-4">
+        <p className="font-mono text-sm text-paper">
+          Predicted: <span className="text-signal">{predictedScore}/100</span> — Actually
+          cited: <span className="text-signal">{result.citedCount} of {result.totalCount}</span>{" "}
+          live searches
+        </p>
+        <p className="mt-2 font-mono text-[11px] leading-relaxed text-muted/60">
+          This is a live snapshot from a single run against Claude's web search — not a
+          statistical benchmark, and not a measure of ChatGPT, Google, or any other AI
+          system. Run it again later and results may differ; model answers aren't
+          perfectly consistent run to run.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function Badge({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <span
+      className={`rounded-sm px-2 py-0.5 font-mono text-[11px] ${
+        ok ? "bg-signal/15 text-signal" : "bg-flag/10 text-flag"
+      }`}
+    >
+      {ok ? "✓" : "✗"} {label}
+    </span>
+  );
+}
+
+function intentLabel(intent: QueryIntent): string {
+  switch (intent) {
+    case "awareness":
+      return "awareness";
+    case "comparison":
+      return "comparison";
+    case "pricing":
+      return "pricing";
+    case "alternative":
+      return "alternative";
+    case "usecase":
+      return "use case";
+    default:
+      return intent;
+  }
+}
+
 function ScoreGauge({ score }: { score: number }) {
   const radius = 42;
   const circumference = 2 * Math.PI * radius;
@@ -314,7 +469,7 @@ function ScoreGauge({ score }: { score: number }) {
           {score}
         </span>
         <span className="font-mono text-[10px] uppercase tracking-widest text-muted">
-          GEO score
+          Citation readiness
         </span>
       </div>
     </div>
