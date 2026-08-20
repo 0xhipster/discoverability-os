@@ -71,6 +71,8 @@ WRITING RULES:
 
 STRICT FORMATTING RULE: You are strictly forbidden from using em dashes or en dashes anywhere in your output. Use commas, colons, or separate sentences instead.
 
+Keep "current" to at most 2 to 3 representative sentences from that block, not the entire block verbatim, even if the real section on the page is longer. Keep "suggested" to a similar length. This is a comparison sample, not a full replacement page.
+
 Return ONLY valid JSON, no markdown fences, no preamble, matching exactly this shape:
 
 {
@@ -138,7 +140,7 @@ export async function generateRemediation(
   try {
     message = await client.messages.create({
       model: MODEL,
-      max_tokens: 2500,
+      max_tokens: 4000,
       messages: [{ role: "user", content: buildPrompt(page, analysis) }],
     });
   } catch (err) {
