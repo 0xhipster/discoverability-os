@@ -23,7 +23,7 @@ export interface Penalty {
 export interface AnalysisResult {
   url: string;
   title: string;
-  overallScore: number; // 0-100 — this is a MODELED prediction, not an observation
+  overallScore: number; // 0-100, this is a MODELED prediction, not an observation
   summary: string;
   factors: Factor[];
   penalties: Penalty[];
@@ -54,7 +54,7 @@ export interface ProbeOutcome {
   retrieved: boolean; // did the target domain show up in search results?
   cited: boolean; // did Claude actually cite the target domain in its answer?
   citedSources: string[]; // other domains Claude cited for this question (excludes target)
-  errored?: boolean; // this single probe failed — outcome is not meaningful
+  errored?: boolean; // this single probe failed, outcome is not meaningful
 }
 
 export interface ProbeResponse {

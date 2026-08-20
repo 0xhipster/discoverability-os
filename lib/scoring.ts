@@ -10,7 +10,7 @@ const FACTOR_KEYS: FactorKey[] = ["statistics", "citations", "quotes", "fluency"
 // Attribution note: only statistics, citations, and quotes are among the
 // top-performing methods actually tested in Aggarwal et al.'s GEO-bench
 // study (KDD 2024). Fluency was also tested there, with a smaller measured
-// effect. entityClarity is NOT one of the nine methods the paper tested —
+// effect. entityClarity is NOT one of the nine methods the paper tested:
 // it's a heuristic we layer on top, based on the general (not
 // paper-sourced) pattern that AI engines extract concrete claims more
 // readily than vague language. The researchNote text below reflects that
@@ -20,7 +20,7 @@ const FACTOR_META: Record<FactorKey, { label: string; researchNote: string }> = 
   statistics: {
     label: "Statistics & hard numbers",
     researchNote:
-      "One of the strongest single levers in the Princeton GEO-bench study (Aggarwal et al., KDD 2024) — Statistics Addition showed up to ~40% higher visibility in generative engine answers.",
+      "One of the strongest single levers in the Princeton GEO-bench study (Aggarwal et al., KDD 2024): Statistics Addition showed up to ~40% higher visibility in generative engine answers.",
   },
   citations: {
     label: "External citations",
@@ -35,34 +35,36 @@ const FACTOR_META: Record<FactorKey, { label: string; researchNote: string }> = 
   fluency: {
     label: "Fluency & directness",
     researchNote:
-      "Fluency Optimization was tested in GEO-bench and showed a real, positive effect on visibility — smaller than statistics, citations, or quotes, but consistent.",
+      "Fluency Optimization was tested in GEO-bench and showed a real, positive effect on visibility: smaller than statistics, citations, or quotes, but consistent.",
   },
   entityClarity: {
     label: "Entity & fact clarity",
     researchNote:
-      "Not one of the nine methods GEO-bench tested — this is a heuristic we add on top, based on the general pattern that AI engines extract concrete, specific claims more readily than generic marketing language.",
+      "Not one of the nine methods GEO-bench tested: this is a heuristic we add on top, based on the general pattern that AI engines extract concrete, specific claims more readily than generic marketing language.",
   },
 };
 
 function buildPrompt(page: ScrapedPage): string {
   return `You are a Generative Engine Optimization (GEO) auditor. You evaluate web page text for how likely it is to be extracted, quoted, and cited by AI answer engines (Claude, ChatGPT, Perplexity).
 
-Three of the five factors below (statistics, citations, quotes) are the top-tested methods from the Princeton GEO-bench study (Aggarwal et al., KDD 2024). Fluency was also tested there with a smaller effect. entityClarity is an additional heuristic beyond what that study measured — treat it as a useful signal, not a cited research finding.
+Three of the five factors below (statistics, citations, quotes) are the top-tested methods from the Princeton GEO-bench study (Aggarwal et al., KDD 2024). Fluency was also tested there with a smaller effect. entityClarity is an additional heuristic beyond what that study measured: treat it as a useful signal, not a cited research finding.
 
 Analyze ONLY the page text provided below. Do not assume anything not present in the text.
 
 Score five factors from 0-100 each:
-1. statistics — presence of concrete numbers, percentages, dates, measurable claims (not vague superlatives)
-2. citations — references to outside sources, studies, named authorities
-3. quotes — direct, attributable quotes from named people
-4. fluency — how direct and plain the writing is vs. vague marketing jargon ("supercharge your synergy" = low; "processes 50,000 transactions per second" = high)
-5. entityClarity — how clearly specific entities are named: product name, category, concrete capabilities, specific claims vs generic fluff
+1. statistics: presence of concrete numbers, percentages, dates, measurable claims (not vague superlatives)
+2. citations: references to outside sources, studies, named authorities
+3. quotes: direct, attributable quotes from named people
+4. fluency: how direct and plain the writing is vs. vague marketing jargon ("supercharge your synergy" = low; "processes 50,000 transactions per second" = high)
+5. entityClarity: how clearly specific entities are named: product name, category, concrete capabilities, specific claims vs generic fluff
 
 Also flag two penalty patterns if present:
-- keywordStuffing — unnatural repetition of keywords/phrases clearly aimed at search engines rather than readers
-- vagueAuthorityClaims — unsupported superlatives like "industry-leading," "best-in-class," "world-class" with no evidence backing them
+- keywordStuffing: unnatural repetition of keywords/phrases clearly aimed at search engines rather than readers
+- vagueAuthorityClaims: unsupported superlatives like "industry-leading," "best-in-class," "world-class" with no evidence backing them
 
-For each factor, give a 0-100 score, a one-sentence finding written in plain English for a marketer (not a developer), and up to 2 short paraphrased pieces of evidence from the page (paraphrase, do not quote verbatim more than a few words).
+For each factor, give a 0-100 score, a one-sentence finding written in clear, clinical English for a technical marketer, and up to 2 short paraphrased pieces of evidence from the page (paraphrase, do not quote verbatim more than a few words). Be precise and strictly factual. Do not use marketing fluff.
+
+STRICT FORMATTING RULE: You are strictly forbidden from using em dashes (—) or en dashes (–) anywhere in your output. Use commas, colons, or separate sentences instead.
 
 Return ONLY valid JSON, no markdown fences, no preamble, matching exactly this shape:
 
@@ -84,7 +86,7 @@ Return ONLY valid JSON, no markdown fences, no preamble, matching exactly this s
   "llmsSummaryFacts": [string, string, string, string, string]
 }
 
-"llmsSummaryFacts" should be 3-5 short, factual, standalone sentences (no marketing tone) that best represent what this page is about — these will be published directly in an llms.txt file for AI crawlers, so they must be accurate to the page content and information-dense.
+"llmsSummaryFacts" should be 3-5 short, factual, standalone sentences (no marketing tone) that best represent what this page is about: these will be published directly in an llms.txt file for AI crawlers, so they must be accurate to the page content and information-dense.
 
 PAGE TITLE: ${page.title}
 PAGE URL: ${page.url}
@@ -241,7 +243,7 @@ export async function analyzePage(page: ScrapedPage): Promise<AnalysisResult> {
     });
   } catch (err) {
     // Don't forward raw SDK error text (can include account/rate-limit
-    // internals) to the client — log it server-side and show a generic
+    // internals) to the client: log it server-side and show a generic
     // message instead.
     console.error("Anthropic API error:", err);
     throw new UserError("Couldn't complete the analysis right now. Please try again in a moment.");

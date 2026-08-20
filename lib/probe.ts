@@ -40,11 +40,13 @@ export async function generateQuestions(
 Based on the page text below, generate exactly 5 realistic questions a prospective customer might ask an AI answer engine (like Claude, ChatGPT, or Perplexity) that this page should plausibly help answer. These must sound like real buyer questions, not SEO keywords.
 
 Tag each question with exactly one intent:
-- "awareness" — what does this company/product do
-- "comparison" — this vs a named or implied competitor
-- "pricing" — cost/pricing questions
-- "category" — an unbranded question a buyer would ask before they've ever heard of this company: describes the problem or need in their own words, and must NOT name this company, its product, or any specific competitor
-- "usecase" — is this good for a specific situation/company type
+- "awareness": what does this company/product do
+- "comparison": this vs a named or implied competitor
+- "pricing": cost/pricing questions
+- "category": an unbranded question a buyer would ask before they've ever heard of this company: describes the problem or need in their own words, and must NOT name this company, its product, or any specific competitor
+- "usecase": is this good for a specific situation/company type
+
+STRICT FORMATTING RULE: You are strictly forbidden from using em dashes (—) or en dashes (–) anywhere in your output. Use commas, colons, or separate sentences instead.
 
 Return ONLY valid JSON, no markdown fences, no preamble, in exactly this shape:
 
@@ -158,7 +160,7 @@ async function runSingleProbe(
   };
 
   try {
-    // Fresh, independent request every time — no shared conversation, no
+    // Fresh, independent request every time: no shared conversation, no
     // replayed/cached search content. Each call is its own real observation.
     const message = await client.messages.create({
       model: MODEL,
@@ -240,7 +242,7 @@ export async function runAllProbes(
   questions: ProbeQuestion[],
   targetDomain: string
 ): Promise<ProbeOutcome[]> {
-  // Run independently and in parallel — each is its own fresh API call.
+  // Run independently and in parallel: each is its own fresh API call.
   // A single failure doesn't take down the batch (see runSingleProbe's catch).
   return Promise.all(questions.map((q) => runSingleProbe(q, targetDomain)));
 }
