@@ -361,6 +361,12 @@ function ProbePanel({
 }) {
   return (
     <div className="animate-rise mt-5 space-y-3">
+      <p className="font-mono text-[11px] leading-relaxed text-muted/60">
+        Retrieved means Claude's search found and read the page. Cited means Claude
+        trusted it enough to actually use it in the answer. A page can be retrieved
+        and still lose to a source the model judged more useful.
+      </p>
+
       {result.outcomes.map((o, i) => (
         <div
           key={o.questionId}
@@ -404,7 +410,10 @@ function ProbePanel({
           This is a live snapshot from a single run against Claude's web search, not a
           statistical benchmark, and not a measure of ChatGPT, Google, or any other AI
           system. Run it again later and results may differ; model answers aren't
-          perfectly consistent run to run.
+          perfectly consistent run to run. Category and comparison questions are
+          harder to win than branded ones: the page is competing against the whole
+          web, not just its own name, so a low count here doesn't mean the tool is
+          broken.
         </p>
       </div>
     </div>
@@ -431,8 +440,8 @@ function intentLabel(intent: QueryIntent): string {
       return "comparison";
     case "pricing":
       return "pricing";
-    case "alternative":
-      return "alternative";
+    case "category":
+      return "category";
     case "usecase":
       return "use case";
     default:
