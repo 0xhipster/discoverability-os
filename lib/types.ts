@@ -65,3 +65,19 @@ export interface ProbeResponse {
   totalCount: number;
   probedAt: string;
 }
+
+// --- Remediation (SUGGESTED rewrite, generated from scan data only) ---
+
+export interface RewriteBlock {
+  label: string; // e.g. "Hero", "Core features"
+  current: string; // the model's extraction of the existing copy for this block
+  suggested: string; // rewritten copy, may contain [BRACKETED] placeholders
+  rationale: string; // one line: which diagnosed weakness this addresses
+}
+
+export interface RemediationResult {
+  url: string;
+  blocks: RewriteBlock[];
+  missingEvidence: string[]; // facts the page needs but does not currently contain
+  generatedAt: string;
+}
