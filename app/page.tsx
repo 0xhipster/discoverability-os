@@ -401,11 +401,20 @@ function ProbePanel({
       ))}
 
       <div className="mt-4 border-t border-line pt-4">
-        <p className="font-mono text-sm text-paper">
-          Predicted: <span className="text-signal">{predictedScore}/100</span>, actually
-          cited: <span className="text-signal">{result.citedCount} of {result.totalCount}</span>{" "}
-          live searches
-        </p>
+        {result.totalCount === 0 ? (
+          <p className="font-mono text-sm text-paper">
+            No searches completed, so there is nothing to compare against the predicted{" "}
+            <span className="text-signal">{predictedScore}/100</span>. This is a failure
+            to measure, not a result of zero. Try running the check again.
+          </p>
+        ) : (
+          <p className="font-mono text-sm text-paper">
+            Predicted: <span className="text-signal">{predictedScore}/100</span>. Across{" "}
+            {result.totalCount} live searches, retrieved{" "}
+            <span className="text-signal">{result.retrievedCount}</span>, actually cited{" "}
+            <span className="text-signal">{result.citedCount}</span>.
+          </p>
+        )}
         <p className="mt-2 font-mono text-[11px] leading-relaxed text-muted/60">
           This is a live snapshot from a single run against Claude's web search, not a
           statistical benchmark, and not a measure of ChatGPT, Google, or any other AI
