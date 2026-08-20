@@ -501,7 +501,7 @@ function scoreColor(score: number) {
 }
 
 function scoreBar(score: number) {
-  if (score >= 70) return "bg-signal";
-  if (score >= 40) return "bg-amber";
-  return "bg-flag";
+  if (score >= 70) return "bg-signal shadow-[0_0_8px_rgba(94,234,212,0.4)]";
+  if (score >= 40) return "bg-amber shadow-[0_0_8px_rgba(242,184,75,0.4)]";
+  return "bg-flag shadow-[0_0_8px_rgba(232,96,76,0.4)]";
 }
