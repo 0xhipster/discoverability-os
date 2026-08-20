@@ -146,9 +146,16 @@ export async function scrapePage(rawUrl: string): Promise<ScrapedPage> {
   const title = $("title").first().text().trim() || finalUrl.hostname;
 
   const blocks: string[] = [];
-  $("h1, h2, h3, h4, p, li, blockquote, td, th, figcaption").each((_, el) => {
+  $("h1, h2, h3, h4, p, li, blockquote, td, th, figcaption, a").each((_, el) => {
     const t = $(el).text().replace(/\s+/g, " ").trim();
     if (t.length > 1) blocks.push(t);
+  });
+
+  // Stats, model names, and certification badges are sometimes conveyed only
+  // through an image's alt text (logos, icons) rather than visible text.
+  $("img[alt]").each((_, el) => {
+    const alt = ($(el).attr("alt") || "").replace(/\s+/g, " ").trim();
+    if (alt.length > 3) blocks.push(alt);
   });
 
   const text = blocks.join("\n").trim();
