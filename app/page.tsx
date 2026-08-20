@@ -1,10 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import type { AnalysisResult, ProbeResponse, QueryIntent } from "@/lib/types";
+import type {
+  AnalysisResult,
+  ProbeResponse,
+  QueryIntent,
+  RemediationResult,
+} from "@/lib/types";
 
 type Status = "idle" | "scanning" | "error" | "done";
 type ProbeStatus = "idle" | "running" | "error" | "done";
+type RemedyStatus = "idle" | "running" | "error" | "done";
 
 const SCAN_LOG = [
   "resolving host…",
@@ -26,6 +32,10 @@ export default function Home() {
   const [probeError, setProbeError] = useState("");
   const [probeResult, setProbeResult] = useState<ProbeResponse | null>(null);
 
+  const [remedyStatus, setRemedyStatus] = useState<RemedyStatus>("idle");
+  const [remedyError, setRemedyError] = useState("");
+  const [remedyResult, setRemedyResult] = useState<RemediationResult | null>(null);
+
   async function handleScan(e: React.FormEvent) {
     e.preventDefault();
     if (!url.trim()) return;
@@ -37,6 +47,9 @@ export default function Home() {
     setProbeStatus("idle");
     setProbeResult(null);
     setProbeError("");
+    setRemedyStatus("idle");
+    setRemedyResult(null);
+    setRemedyError("");
 
     const interval = setInterval(() => {
       setLogIndex((i) => (i < SCAN_LOG.length - 1 ? i + 1 : i));
@@ -88,6 +101,33 @@ export default function Home() {
     } catch (err) {
       setProbeError(err instanceof Error ? err.message : "Search check failed.");
       setProbeStatus("error");
+    }
+  }
+
+  async function handleRemediate() {
+    if (!url.trim()) return;
+
+    setRemedyStatus("running");
+    setRemedyError("");
+    setRemedyResult(null);
+
+    try {
+      const res = await fetch("/api/remediate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Rewrite failed.");
+      }
+
+      setRemedyResult(data as RemediationResult);
+      setRemedyStatus("done");
+    } catch (err) {
+      setRemedyError(err instanceof Error ? err.message : "Rewrite failed.");
+      setRemedyStatus("error");
     }
   }
 
@@ -165,6 +205,36 @@ export default function Home() {
               )}
               {probeStatus === "done" && probeResult && (
                 <ProbePanel result={probeResult} predictedScore={result.overallScore} />
+              )}
+            </div>
+
+            <div className="mt-8 rounded-sm border border-line bg-panel p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-muted">
+                    Suggested rewrite
+                  </h2>
+                  <p className="mt-1 font-mono text-xs leading-relaxed text-muted/70">
+                    Restructures the copy this scan flagged, reusing only facts already on
+                    the page. Missing evidence is marked as a placeholder, never invented.
+                  </p>
+                </div>
+                <button
+                  onClick={handleRemediate}
+                  disabled={remedyStatus === "running"}
+                  className="whitespace-nowrap rounded-sm border border-signal/40 px-5 py-2.5 font-mono text-xs text-signal transition hover:bg-signal/10 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {remedyStatus === "running"
+                    ? "Rewriting…"
+                    : "Generate rewrite →"}
+                </button>
+              </div>
+
+              {remedyStatus === "error" && (
+                <p className="mt-4 font-mono text-xs text-flag">{remedyError}</p>
+              )}
+              {remedyStatus === "done" && remedyResult && (
+                <RemediationPanel result={remedyResult} />
               )}
             </div>
           </>
@@ -425,6 +495,64 @@ function ProbePanel({
           broken.
         </p>
       </div>
+    </div>
+  );
+}
+
+function RemediationPanel({ result }: { result: RemediationResult }) {
+  return (
+    <div className="animate-rise mt-5 space-y-5">
+      {result.blocks.map((b) => (
+        <div key={b.label} className="rounded-sm border border-line bg-ink/40 p-4">
+          <div className="font-mono text-[11px] uppercase tracking-wider text-signal">
+            {b.label}
+          </div>
+
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-wider text-muted/60">
+                Current
+              </div>
+              <p className="mt-1.5 font-mono text-[11px] leading-relaxed text-muted/70">
+                {b.current}
+              </p>
+            </div>
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-wider text-signal/70">
+                Suggested
+              </div>
+              <p className="mt-1.5 font-mono text-[11px] leading-relaxed text-paper/90">
+                {b.suggested}
+              </p>
+            </div>
+          </div>
+
+          <p className="mt-3 border-t border-line pt-2 font-mono text-[10px] leading-relaxed text-muted/50">
+            {b.rationale}
+          </p>
+        </div>
+      ))}
+
+      {result.missingEvidence.length > 0 && (
+        <div className="rounded-sm border border-amber/30 bg-amber/5 p-4">
+          <div className="font-mono text-[11px] uppercase tracking-wider text-amber">
+            Evidence you need to supply
+          </div>
+          <ul className="mt-2 space-y-1">
+            {result.missingEvidence.map((m, i) => (
+              <li key={i} className="font-mono text-[11px] leading-relaxed text-paper/80">
+                · {m}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <p className="font-mono text-[11px] leading-relaxed text-muted/60">
+        This rewrite reuses only facts already present on the scanned page. Anything in
+        [BRACKETS] is a gap the page does not currently answer, and you need to supply the
+        real figure. Nothing here has been verified against a source.
+      </p>
     </div>
   );
 }
