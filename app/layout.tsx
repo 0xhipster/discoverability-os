@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     siteName: "Discoverability Score",
     images: [
       {
-        url: "/og-image.png",
+        url: "/og-image.jpg",
         width: 1200,
         height: 630,
       },
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     title: "Discoverability Score: GEO Audit",
     description:
       "Scan any page for how well it's built to be read, quoted, and cited by AI answer engines.",
-    images: ["/og-image.png"],
+    images: ["/og-image.jpg"],
   },
 };
 
