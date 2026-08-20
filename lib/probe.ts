@@ -8,7 +8,7 @@ const VALID_INTENTS: QueryIntent[] = [
   "awareness",
   "comparison",
   "pricing",
-  "alternative",
+  "category",
   "usecase",
 ];
 
@@ -43,7 +43,7 @@ Tag each question with exactly one intent:
 - "awareness" — what does this company/product do
 - "comparison" — this vs a named or implied competitor
 - "pricing" — cost/pricing questions
-- "alternative" — alternatives to this product/category
+- "category" — an unbranded question a buyer would ask before they've ever heard of this company: describes the problem or need in their own words, and must NOT name this company, its product, or any specific competitor
 - "usecase" — is this good for a specific situation/company type
 
 Return ONLY valid JSON, no markdown fences, no preamble, in exactly this shape:
@@ -53,7 +53,7 @@ Return ONLY valid JSON, no markdown fences, no preamble, in exactly this shape:
     { "question": "string", "intent": "awareness" },
     { "question": "string", "intent": "comparison" },
     { "question": "string", "intent": "pricing" },
-    { "question": "string", "intent": "alternative" },
+    { "question": "string", "intent": "category" },
     { "question": "string", "intent": "usecase" }
   ]
 }

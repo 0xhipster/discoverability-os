@@ -38,7 +38,7 @@ export type QueryIntent =
   | "awareness"
   | "comparison"
   | "pricing"
-  | "alternative"
+  | "category"
   | "usecase";
 
 export interface ProbeQuestion {
