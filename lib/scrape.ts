@@ -146,7 +146,21 @@ export async function scrapePage(rawUrl: string): Promise<ScrapedPage> {
   const title = $("title").first().text().trim() || finalUrl.hostname;
 
   const blocks: string[] = [];
-  $("h1, h2, h3, h4, p, li, blockquote, td, th, figcaption, a").each((_, el) => {
+  $("h1, h2, h3, h4, p, li, blockquote, td, th, figcaption").each((_, el) => {
+    const t = $(el).text().replace(/\s+/g, " ").trim();
+    if (t.length > 1) blocks.push(t);
+  });
+
+  // Only capture links that AREN'T already inside one of the elements
+  // above, so a link inside a paragraph or list item isn't counted twice.
+  // Cards, badges, and standalone stat callouts often sit directly under a
+  // div with no wrapping p/li/heading, which is exactly what this catches.
+  $("a").each((_, el) => {
+    const insideCapturedBlock =
+      $(el).closest("h1, h2, h3, h4, p, li, blockquote, td, th, figcaption").length > 0;
+    const wrapsCapturedBlock =
+      $(el).find("h1, h2, h3, h4, p, li, blockquote, td, th, figcaption").length > 0;
+    if (insideCapturedBlock || wrapsCapturedBlock) return;
     const t = $(el).text().replace(/\s+/g, " ").trim();
     if (t.length > 1) blocks.push(t);
   });
@@ -158,7 +172,10 @@ export async function scrapePage(rawUrl: string): Promise<ScrapedPage> {
     if (alt.length > 3) blocks.push(alt);
   });
 
-  const text = blocks.join("\n").trim();
+  // Belt and braces: drop exact-duplicate lines regardless of which
+  // selector produced them.
+  const dedupedBlocks = Array.from(new Set(blocks));
+  const text = dedupedBlocks.join("\n").trim();
 
   if (text.length < 40) {
     throw new UserError(
