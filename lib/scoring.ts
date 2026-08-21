@@ -62,7 +62,7 @@ Also flag two penalty patterns if present:
 - keywordStuffing: unnatural repetition of keywords/phrases clearly aimed at search engines rather than readers
 - vagueAuthorityClaims: unsupported superlatives like "industry-leading," "best-in-class," "world-class" with no evidence backing them
 
-For each factor, give a 0-100 score, a one-sentence finding written in clear, clinical English for a technical marketer, and up to 2 short paraphrased pieces of evidence from the page (paraphrase, do not quote verbatim more than a few words). Be precise and strictly factual. Do not use marketing fluff.
+For each factor, give a 0-100 score, a one-sentence finding written in clear, clinical English for a technical marketer, and up to 2 short paraphrased pieces of evidence from the page (paraphrase, do not quote verbatim more than a few words, keep each piece of evidence under 15 words). Be precise and strictly factual. Do not use marketing fluff.
 
 STRICT FORMATTING RULE: You are strictly forbidden from using em dashes (—) or en dashes (–) anywhere in your output. Use commas, colons, or separate sentences instead.
 
@@ -234,27 +234,41 @@ export async function analyzePage(page: ScrapedPage): Promise<AnalysisResult> {
 
   const client = new Anthropic({ apiKey });
 
-  let message: Awaited<ReturnType<typeof client.messages.create>>;
-  try {
-    message = await client.messages.create({
-      model: MODEL,
-      max_tokens: 2500,
-      messages: [{ role: "user", content: buildPrompt(page) }],
-    });
-  } catch (err) {
-    // Don't forward raw SDK error text (can include account/rate-limit
-    // internals) to the client: log it server-side and show a generic
-    // message instead.
-    console.error("Anthropic API error:", err);
-    throw new UserError("Couldn't complete the analysis right now. Please try again in a moment.");
+  // Occasionally the model's response is malformed or truncated (e.g. hits
+  // the token limit mid-JSON on an unusually dense page). Rather than
+  // surface that as a user-facing error, retry with a fresh, independent
+  // call. Most transient failures self-heal on a second attempt, and the
+  // user never sees a failure they'd have to manually retry themselves.
+  const MAX_ATTEMPTS = 3;
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const message = await client.messages.create({
+        model: MODEL,
+        max_tokens: 3500,
+        messages: [{ role: "user", content: buildPrompt(page) }],
+      });
+
+      const textBlock = message.content.find((b) => b.type === "text");
+      if (!textBlock || textBlock.type !== "text") {
+        throw new Error("Model didn't return a text response.");
+      }
+
+      const out = parseClaudeJson(textBlock.text);
+      return buildAnalysisResult(page, out);
+    } catch (err) {
+      lastError = err;
+      console.error(`analyzePage attempt ${attempt}/${MAX_ATTEMPTS} failed:`, err);
+      // Loop again unless this was the last attempt.
+    }
   }
 
-  const textBlock = message.content.find((b) => b.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
-    throw new UserError("The model didn't return a text response.");
-  }
+  console.error("analyzePage exhausted all attempts:", lastError);
+  throw new UserError("Couldn't complete the analysis right now. Please try again in a moment.");
+}
 
-  const out = parseClaudeJson(textBlock.text);
+function buildAnalysisResult(page: ScrapedPage, out: ClaudeAnalysisOut): AnalysisResult {
 
   const factors: Factor[] = FACTOR_KEYS.map((key) => {
     const f = out.factors[key];
