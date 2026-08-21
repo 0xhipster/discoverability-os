@@ -323,12 +323,13 @@ function Header() {
         <span className="text-signal">quote this page</span>, or skip it?
       </h1>
       <p className="mt-4 max-w-xl font-mono text-sm leading-relaxed text-muted">
-        Paste a URL. Claude scores it on five factors: statistics,
-        citations, and quotes are the top-tested methods from Princeton's
-        GEO-bench study (KDD 2024); fluency and entity clarity are
-        additional heuristics layered on top. Then it outputs an{" "}
-        <span className="text-paper">llms.txt</span> file ready for AI
-        crawlers.
+        AI assistants answer questions about your product by quoting pages they
+        find credible. If yours reads like marketing copy, they skip it. Paste
+        a URL to see how yours scores and what to change.
+      </p>
+      <p className="mt-2 max-w-xl font-mono text-xs leading-relaxed text-muted/60">
+        Five factors, three drawn from Princeton's GEO-bench study (KDD 2024),
+        two our own.
       </p>
     </div>
   );
