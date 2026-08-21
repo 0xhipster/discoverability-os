@@ -31,6 +31,7 @@ export default function Home() {
   const [url, setUrl] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [logIndex, setLogIndex] = useState(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [error, setError] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
 
@@ -57,6 +58,7 @@ export default function Home() {
     setError("");
     setResult(null);
     setLogIndex(0);
+    setElapsedSeconds(0);
     setProbeStatus("idle");
     setProbeResult(null);
     setProbeError("");
@@ -64,9 +66,17 @@ export default function Home() {
     setRemedyResult(null);
     setRemedyError("");
 
-    const interval = setInterval(() => {
+    const logInterval = setInterval(() => {
       setLogIndex((i) => (i < SCAN_LOG.length - 1 ? i + 1 : i));
     }, 550);
+
+    // Real, measured elapsed time. Shown alongside the estimated progress
+    // bar below so there's always a truthful number on screen, since a
+    // scan can silently retry server-side and its real duration isn't
+    // knowable from the browser.
+    const clockInterval = setInterval(() => {
+      setElapsedSeconds((s) => s + 1);
+    }, 1000);
 
     try {
       const res = await fetch("/api/analyze", {
@@ -80,11 +90,13 @@ export default function Home() {
         throw new Error(data.error || "Scan failed.");
       }
 
-      clearInterval(interval);
+      clearInterval(logInterval);
+      clearInterval(clockInterval);
       setResult(data as AnalysisResult);
       setStatus("done");
     } catch (err) {
-      clearInterval(interval);
+      clearInterval(logInterval);
+      clearInterval(clockInterval);
       setError(err instanceof Error ? err.message : "Scan failed.");
       setStatus("error");
     }
@@ -200,7 +212,9 @@ export default function Home() {
           </div>
         </form>
 
-        {status === "scanning" && <ScanningPanel logIndex={logIndex} />}
+        {status === "scanning" && (
+          <ScanningPanel logIndex={logIndex} elapsedSeconds={elapsedSeconds} />
+        )}
         {status === "error" && <ErrorPanel message={error} />}
         {status === "done" && result && (
           <>
@@ -329,12 +343,45 @@ function IdleHint() {
   );
 }
 
-function ScanningPanel({ logIndex }: { logIndex: number }) {
+function estimateProgress(seconds: number): number {
+  // Asymptotic curve that approaches but never reaches 100, since the real
+  // completion time isn't knowable from the browser (the scan can silently
+  // retry server-side). Feels like progress without claiming precision it
+  // doesn't have; the actual elapsed-seconds readout next to it is the
+  // honest number.
+  const pct = 92 * (1 - Math.exp(-seconds / 8));
+  return Math.round(pct);
+}
+
+function ScanningPanel({
+  logIndex,
+  elapsedSeconds,
+}: {
+  logIndex: number;
+  elapsedSeconds: number;
+}) {
+  const pct = estimateProgress(elapsedSeconds);
+
   return (
     <div className="animate-rise mt-8 overflow-hidden rounded-sm border border-line bg-panel">
       <div className="relative h-0.5 w-full overflow-hidden bg-line">
         <div className="absolute h-full w-1/3 bg-signal animate-[scanline_1.4s_ease-in-out_infinite]" />
       </div>
+
+      <div className="flex items-center justify-between border-b border-line px-5 py-3">
+        <div className="flex-1">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-line">
+            <div
+              className="h-full rounded-full bg-signal transition-[width] duration-500 ease-out"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        </div>
+        <span className="ml-4 whitespace-nowrap font-mono text-[11px] text-muted">
+          ~{pct}% &middot; {elapsedSeconds}s elapsed
+        </span>
+      </div>
+
       <div className="space-y-2 p-5 font-mono text-xs text-muted">
         {SCAN_LOG.map((line, i) => (
           <div
