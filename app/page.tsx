@@ -327,10 +327,10 @@ function ResultPanel({
           <div className="font-mono text-xs uppercase tracking-[0.2em] text-muted">
             {new URL(result.url).hostname}
           </div>
-          <div className="mt-1 font-display text-lg font-medium text-paper">
+          <div className="mt-1 font-display text-lg font-medium text-paper break-words">
             {result.title}
           </div>
-          <p className="mt-2 font-mono text-sm leading-relaxed text-muted">
+          <p className="mt-2 font-mono text-sm leading-relaxed text-muted break-words">
             {result.summary}
           </p>
           <div className="mt-3 font-mono text-[11px] text-muted/60">
@@ -362,19 +362,19 @@ function ResultPanel({
                   style={{ width: `${f.score}%` }}
                 />
               </div>
-              <p className="mt-3 font-mono text-xs leading-relaxed text-muted">
+              <p className="mt-3 font-mono text-xs leading-relaxed text-muted break-words">
                 {f.finding}
               </p>
               {f.evidence.length > 0 && (
                 <ul className="mt-2 space-y-1">
                   {f.evidence.map((e, i) => (
-                    <li key={i} className="font-mono text-[11px] text-muted/70">
+                    <li key={i} className="font-mono text-[11px] text-muted/70 break-words">
                       · {e}
                     </li>
                   ))}
                 </ul>
               )}
-              <p className="mt-3 border-t border-line pt-2 font-mono text-[10px] leading-relaxed text-muted/50">
+              <p className="mt-3 border-t border-line pt-2 font-mono text-[10px] leading-relaxed text-muted/50 break-words">
                 {f.researchNote}
               </p>
             </div>
@@ -393,7 +393,7 @@ function ResultPanel({
               .map((p) => (
                 <div
                   key={p.label}
-                  className="rounded-sm border border-flag/30 bg-flag/5 p-3 font-mono text-xs text-paper/90"
+                  className="rounded-sm border border-flag/30 bg-flag/5 p-3 font-mono text-xs text-paper/90 break-words"
                 >
                   <span className="text-flag">{p.label}:</span> {p.note}
                 </div>
@@ -448,7 +448,7 @@ function ProbePanel({
               <span className="mr-2 rounded-sm bg-line px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted">
                 {intentLabel(o.intent)}
               </span>
-              <span className="font-mono text-xs text-paper/90">{o.question}</span>
+              <span className="font-mono text-xs text-paper/90 break-words">{o.question}</span>
             </div>
           </div>
 
@@ -461,7 +461,7 @@ function ProbePanel({
               <Badge ok={o.retrieved} label="Retrieved" />
               <Badge ok={o.cited} label="Cited" />
               {!o.cited && o.citedSources.length > 0 && (
-                <span className="font-mono text-[11px] text-muted/60">
+                <span className="font-mono text-[11px] text-muted/60 break-words">
                   Cited instead: {o.citedSources.join(", ")}
                 </span>
               )}
@@ -513,7 +513,7 @@ function RemediationPanel({ result }: { result: RemediationResult }) {
               <div className="font-mono text-[10px] uppercase tracking-wider text-muted/60">
                 Current
               </div>
-              <p className="mt-1.5 font-mono text-[11px] leading-relaxed text-muted/70">
+              <p className="mt-1.5 font-mono text-[11px] leading-relaxed text-muted/70 break-words">
                 {b.current}
               </p>
             </div>
@@ -521,13 +521,13 @@ function RemediationPanel({ result }: { result: RemediationResult }) {
               <div className="font-mono text-[10px] uppercase tracking-wider text-signal/70">
                 Suggested
               </div>
-              <p className="mt-1.5 font-mono text-[11px] leading-relaxed text-paper/90">
+              <p className="mt-1.5 font-mono text-[11px] leading-relaxed text-paper/90 break-words">
                 {b.suggested}
               </p>
             </div>
           </div>
 
-          <p className="mt-3 border-t border-line pt-2 font-mono text-[10px] leading-relaxed text-muted/50">
+          <p className="mt-3 border-t border-line pt-2 font-mono text-[10px] leading-relaxed text-muted/50 break-words">
             {b.rationale}
           </p>
         </div>
@@ -540,7 +540,7 @@ function RemediationPanel({ result }: { result: RemediationResult }) {
           </div>
           <ul className="mt-2 space-y-1">
             {result.missingEvidence.map((m, i) => (
-              <li key={i} className="font-mono text-[11px] leading-relaxed text-paper/80">
+              <li key={i} className="font-mono text-[11px] leading-relaxed text-paper/80 break-words">
                 · {m}
               </li>
             ))}
