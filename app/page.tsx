@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type {
   AnalysisResult,
   ProbeResponse,
@@ -11,6 +11,12 @@ import type {
 type Status = "idle" | "scanning" | "error" | "done";
 type ProbeStatus = "idle" | "running" | "error" | "done";
 type RemedyStatus = "idle" | "running" | "error" | "done";
+
+const EXAMPLE_URLS = [
+  { label: "Vercel", url: "https://vercel.com" },
+  { label: "Linear", url: "https://linear.app" },
+  { label: "Stripe", url: "https://stripe.com" },
+];
 
 const SCAN_LOG = [
   "resolving host…",
@@ -35,6 +41,13 @@ export default function Home() {
   const [remedyStatus, setRemedyStatus] = useState<RemedyStatus>("idle");
   const [remedyError, setRemedyError] = useState("");
   const [remedyResult, setRemedyResult] = useState<RemediationResult | null>(null);
+
+  const probeSectionRef = useRef<HTMLDivElement>(null);
+  const remedySectionRef = useRef<HTMLDivElement>(null);
+
+  function scrollToSection(ref: React.RefObject<HTMLDivElement>) {
+    ref.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
 
   async function handleScan(e: React.FormEvent) {
     e.preventDefault();
@@ -170,15 +183,53 @@ export default function Home() {
               {status === "scanning" ? "Scanning…" : "Run scan →"}
             </button>
           </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="font-mono text-[11px] text-muted/60">Try:</span>
+            {EXAMPLE_URLS.map((ex) => (
+              <button
+                key={ex.url}
+                type="button"
+                onClick={() => setUrl(ex.url)}
+                disabled={status === "scanning"}
+                className="rounded-sm border border-line px-2.5 py-1 font-mono text-[11px] text-muted transition hover:border-signal/40 hover:text-signal disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {ex.label}
+              </button>
+            ))}
+          </div>
         </form>
 
         {status === "scanning" && <ScanningPanel logIndex={logIndex} />}
         {status === "error" && <ErrorPanel message={error} />}
         {status === "done" && result && (
           <>
-            <ResultPanel result={result} onDownload={downloadLlmsTxt} />
+            <ResultPanel
+              result={result}
+              onDownload={downloadLlmsTxt}
+              nextSteps={
+                <div className="mt-6 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-sm border border-line/60 bg-panel/50 px-4 py-3 font-mono text-[11px] text-muted">
+                  <span className="text-muted/60">Next:</span>
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection(probeSectionRef)}
+                    className="text-signal underline-offset-4 transition hover:underline"
+                  >
+                    test it against live search
+                  </button>
+                  <span className="text-muted/40">or</span>
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection(remedySectionRef)}
+                    className="text-signal underline-offset-4 transition hover:underline"
+                  >
+                    generate a rewrite
+                  </button>
+                </div>
+              }
+            />
 
-            <div className="mt-8 rounded-sm border border-line bg-panel p-5">
+            <div ref={probeSectionRef} className="mt-8 rounded-sm border border-line bg-panel p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-muted">
@@ -208,7 +259,7 @@ export default function Home() {
               )}
             </div>
 
-            <div className="mt-8 rounded-sm border border-line bg-panel p-5">
+            <div ref={remedySectionRef} className="mt-8 rounded-sm border border-line bg-panel p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-muted">
@@ -315,10 +366,14 @@ function ErrorPanel({ message }: { message: string }) {
 function ResultPanel({
   result,
   onDownload,
+  nextSteps,
 }: {
   result: AnalysisResult;
   onDownload: () => void;
+  nextSteps?: React.ReactNode;
 }) {
+  const [llmsOpen, setLlmsOpen] = useState(false);
+
   return (
     <div className="animate-rise mt-10 space-y-8">
       <div className="flex flex-col gap-6 rounded-sm border border-line bg-panel p-6 sm:flex-row sm:items-center">
@@ -338,6 +393,8 @@ function ResultPanel({
           </div>
         </div>
       </div>
+
+      {nextSteps}
 
       <div>
         <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-muted">
@@ -407,16 +464,32 @@ function ResultPanel({
           <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-muted">
             llms.txt output
           </h2>
-          <button
-            onClick={onDownload}
-            className="rounded-sm border border-signal/40 px-4 py-1.5 font-mono text-xs text-signal transition hover:bg-signal/10"
-          >
-            Download ↓
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setLlmsOpen((v) => !v)}
+              className="rounded-sm border border-line px-3 py-1.5 font-mono text-xs text-muted transition hover:border-signal/40 hover:text-signal"
+            >
+              {llmsOpen ? "Hide ▴" : "Show ▾"}
+            </button>
+            <button
+              onClick={onDownload}
+              className="rounded-sm border border-signal/40 px-4 py-1.5 font-mono text-xs text-signal transition hover:bg-signal/10"
+            >
+              Download ↓
+            </button>
+          </div>
         </div>
-        <pre className="mt-4 max-h-64 overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-muted">
-          {result.llmsTxt}
-        </pre>
+        {llmsOpen ? (
+          <pre className="mt-4 max-h-64 overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-muted">
+            {result.llmsTxt}
+          </pre>
+        ) : (
+          <p className="mt-3 font-mono text-[11px] text-muted/60">
+            A structured summary of this page for AI crawlers. Download it, or show it
+            here.
+          </p>
+        )}
       </div>
     </div>
   );
